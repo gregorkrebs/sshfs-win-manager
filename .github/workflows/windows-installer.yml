@@ -24,7 +24,8 @@ jobs:
         run: npm ci
 
       - name: Build installer
-        run: npm run build
+        # electron-builder tries to publish in CI unless explicitly disabled.
+        run: npm run build -- --publish never
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
