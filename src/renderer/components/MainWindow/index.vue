@@ -9,7 +9,7 @@
           </div>
 
           <draggable :list="connections" @end="updateConnectionList" chosenClass="highlight-item" dragClass="hide-dragging-item" handle=".grip" animation="200">
-            <ConnectionItem v-for="conn in connections" :key="conn.uuid" :conn="conn" :mode="listMode" @connect="connect" @disconnect="disconnect" @open="openLocal" @edit="editConnection" @delete="deleteConnection" @clone="cloneConnection"/>
+            <ConnectionItem v-for="conn in connections" :key="conn.uuid" :conn="conn" :mode="listMode" @connect="connect" @disconnect="disconnect" @open="openLocal" @ssh="openSsh" @edit="editConnection" @delete="deleteConnection" @clone="cloneConnection"/>
           </draggable>
         </div>
 
@@ -65,6 +65,7 @@
 
 <script>
 import fs from 'fs'
+import { spawn } from 'child_process'
 import { remote, clipboard } from 'electron'
 
 import { v4 as uuid } from 'uuid'
@@ -163,6 +164,35 @@ export default {
 
     openLocal (path) {
       remote.shell.openItem(path)
+    },
+
+    openSsh (conn) {
+      // Windows-only app. We use the built-in OpenSSH client (ssh.exe).
+      // For password auth we cannot (and should not) auto-inject passwords.
+      // For key auth, ssh will use the given key (and/or the agent) and connect directly.
+
+      const target = `${conn.user}@${conn.host}`
+      const sshArgs = ['-p', String(conn.port || 22)]
+
+      if (conn.authType === 'key-file' && conn.keyFile) {
+        sshArgs.push('-i', conn.keyFile)
+        sshArgs.push('-o', 'IdentitiesOnly=yes')
+      }
+
+      // Keep the terminal window open after the SSH session ends.
+      const title = `SSH: ${conn.name}`
+
+      try {
+        const child = spawn('cmd.exe', ['/c', 'start', `"${title}"`, 'cmd.exe', '/k', 'ssh', ...sshArgs, target], {
+          windowsHide: true,
+          detached: true,
+          stdio: 'ignore'
+        })
+
+        child.unref()
+      } catch (e) {
+        this.notify(`Can't open SSH terminal for '${conn.name}': ${e}`, 'error-icon')
+      }
     },
 
     addNewConnection () {
