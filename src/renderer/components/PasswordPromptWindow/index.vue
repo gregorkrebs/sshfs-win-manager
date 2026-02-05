@@ -15,11 +15,7 @@
 </template>
 
 <script>
-import { remote } from 'electron'
-
-import Window from '@/components/Window'
-
-const windowManager = remote.require('electron-window-manager')
+import Window from '@/components/Window/index.vue'
 
 export default {
   name: 'password-prompt-window',
@@ -30,23 +26,20 @@ export default {
 
   methods: {
     cancel () {
-      windowManager.bridge.emit('main-window-message', {
-        message: 'connection-password-cancel',
-        conn: this.conn
+      window.openclaw.emit('password-prompt:cancel', {
+        uuid: this.conn.uuid
       })
 
-      windowManager.closeCurrent()
+      window.openclaw.windowClose()
     },
 
     ok () {
-      this.conn.password = this.password
-
-      windowManager.bridge.emit('main-window-message', {
-        message: 'connection-password',
-        conn: this.conn
+      window.openclaw.emit('password-prompt:submit', {
+        uuid: this.conn.uuid,
+        password: this.password
       })
 
-      windowManager.closeCurrent()
+      window.openclaw.windowClose()
     }
   },
 

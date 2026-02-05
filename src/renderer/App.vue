@@ -5,8 +5,6 @@
 </template>
 
 <script>
-import { ipcRenderer } from 'electron'
-
 import ProcessManager from '@/ProcessManager'
 
 export default {
@@ -15,9 +13,10 @@ export default {
   mounted () {
     this.$store.dispatch('APPLY_MIGRATIONS')
 
-    ipcRenderer.on('terminate-child-processes', () => {
+    // From main process (tray quit)
+    window.openclaw.on('terminate-child-processes', () => {
       ProcessManager.terminateAll().then(() => {
-        ipcRenderer.send('child-processes-terminated')
+        window.openclaw.emit('child-processes-terminated')
       })
     })
   }

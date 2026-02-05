@@ -66,7 +66,6 @@
 <script>
 import fs from 'fs'
 import { spawn } from 'child_process'
-import { remote, clipboard } from 'electron'
 
 import { v4 as uuid } from 'uuid'
 
@@ -74,11 +73,11 @@ import draggable from 'vuedraggable'
 
 import ProcessManager from '@/ProcessManager'
 
-import Window from '@/components/Window'
-import Icon from '@/components/Icon'
-import ConnectionItem from './ConnectionItem'
+import Window from '@/components/Window/index.vue'
+import Icon from '@/components/Icon.vue'
+import ConnectionItem from './ConnectionItem.vue'
 
-const windowManager = remote.require('electron-window-manager')
+// windowManager removed (Electron remote is disabled in modern versions)
 
 export default {
   name: 'main-window',
@@ -115,37 +114,27 @@ export default {
 
           this.updateConnectionList()
 
-          this.notify(`Can't connect to '${conn.name}': ${error}`, 'error-icon')
+          this.notify(`Can't connect to '${conn.name}': ${error}`)
         })
       }
 
       if (conn.authType === 'password-ask') {
-        const window = windowManager.createNew('password-prompt-window', '', `/index.html#password-prompt/${conn.uuid}`, null, {
-          height: 190,
+        window.openclaw.windowOpen(`/password-prompt/${conn.uuid}`, {
+          name: `password-prompt-window:${conn.uuid}`,
           width: 350,
-          useContentSize: true,
-          frame: false,
-          maximizable: false,
-          minimizable: false,
-          resizable: false,
-          modal: true,
-          parent: windowManager.get('main-window').object
-        }).create()
-
-        window.object.once('ready-to-show', () => {
-          window.object.show()
+          height: 190,
+          modal: true
         })
 
-        windowManager.bridge.once('main-window-message', data => {
-          switch (data.message) {
-            case 'connection-password':
-              connect(data.conn)
-              break
+        // One-shot listeners for the password prompt response
+        window.openclaw.once('connection-password', data => {
+          if (!data || data.uuid !== conn.uuid) return
+          connect({ ...conn, password: data.password })
+        })
 
-            case 'connection-password-cancel':
-              conn.status = 'disconnected'
-              break
-          }
+        window.openclaw.once('connection-password-cancel', data => {
+          if (!data || data.uuid !== conn.uuid) return
+          conn.status = 'disconnected'
         })
       } else {
         connect(conn)
@@ -163,7 +152,7 @@ export default {
     },
 
     openLocal (path) {
-      remote.shell.openItem(path)
+      window.openclaw.openPath(path)
     },
 
     openSsh (conn) {
@@ -191,43 +180,25 @@ export default {
 
         child.unref()
       } catch (e) {
-        this.notify(`Can't open SSH terminal for '${conn.name}': ${e}`, 'error-icon')
+        this.notify(`Can't open SSH terminal for '${conn.name}': ${e}`)
       }
     },
 
     addNewConnection () {
-      const window = windowManager.createNew('add-new-connection-window', '', '/index.html#add-new-connection', null, {
-        height: 770,
+      window.openclaw.windowOpen('/add-new-connection', {
+        name: 'add-new-connection-window',
         width: 500,
-        useContentSize: true,
-        frame: false,
-        maximizable: false,
-        minimizable: false,
-        resizable: false,
-        modal: true,
-        parent: windowManager.get('main-window').object
-      }).create()
-
-      window.object.once('ready-to-show', () => {
-        window.object.show()
+        height: 770,
+        modal: true
       })
     },
 
     editConnection (conn) {
-      const window = windowManager.createNew('edit-connection-window', '', `/index.html#edit-connection/${conn.uuid}`, null, {
-        height: 770,
+      window.openclaw.windowOpen(`/edit-connection/${conn.uuid}`, {
+        name: `edit-connection-window:${conn.uuid}`,
         width: 500,
-        useContentSize: true,
-        frame: false,
-        maximizable: false,
-        minimizable: false,
-        resizable: false,
-        modal: true,
-        parent: windowManager.get('main-window').object
-      }).create()
-
-      window.object.once('ready-to-show', () => {
-        window.object.show()
+        height: 770,
+        modal: true
       })
     },
 
@@ -253,38 +224,20 @@ export default {
     },
 
     settings () {
-      const window = windowManager.createNew('settings-window', '', '/index.html#settings', null, {
-        height: 365,
+      window.openclaw.windowOpen('/settings', {
+        name: 'settings-window',
         width: 500,
-        useContentSize: true,
-        frame: false,
-        maximizable: false,
-        minimizable: false,
-        resizable: false,
-        modal: true,
-        parent: windowManager.get('main-window').object
-      }).create()
-
-      window.object.once('ready-to-show', () => {
-        window.object.show()
+        height: 365,
+        modal: true
       })
     },
 
     about () {
-      const window = windowManager.createNew('about-window', '', '/index.html#about', null, {
-        height: 350,
+      window.openclaw.windowOpen('/about', {
+        name: 'about-window',
         width: 550,
-        useContentSize: true,
-        frame: false,
-        maximizable: false,
-        minimizable: false,
-        resizable: false,
-        modal: true,
-        parent: windowManager.get('main-window').object
-      }).create()
-
-      window.object.once('ready-to-show', () => {
-        window.object.show()
+        height: 380,
+        modal: true
       })
     },
 
@@ -303,10 +256,9 @@ export default {
       this.$store.dispatch('RESET_SETTINGS')
     },
 
-    notify (text, icon = 'app-icon') {
+    notify (text) {
       /* eslint-disable-next-line */
       new Notification('SSHFS-Win Manager', {
-        icon: __static + '/' + icon + '.png',
         body: text
       })
     },
@@ -319,8 +271,8 @@ export default {
       this.debugOutput = ''
     },
 
-    copyDebugOutput () {
-      clipboard.writeText(this.debugOutput)
+    async copyDebugOutput () {
+      await window.openclaw.clipboardWriteText(this.debugOutput)
 
       this.notify('Debug output copied to clipboard')
     },
@@ -408,7 +360,7 @@ export default {
         conn.pid = null
         conn.status = 'disconnected'
 
-        this.notify(`'${conn.name}' was disconnected due to a connection error.\nCheck your internet connection`, 'error-icon')
+        this.notify(`'${conn.name}' was disconnected due to a connection error.\nCheck your internet connection`)
       }
     })
 
@@ -430,7 +382,7 @@ export default {
         conn.pid = null
         conn.status = 'disconnected'
 
-        this.notify(`Process Timeout: Couldn't connect to '${conn.name}'`, 'error-icon')
+        this.notify(`Process Timeout: Couldn't connect to '${conn.name}'`)
       }
     })
   }

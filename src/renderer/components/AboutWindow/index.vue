@@ -35,11 +35,7 @@
 </template>
 
 <script>
-import { shell, remote } from 'electron'
-
-import Window from '@/components/Window'
-
-const app = remote.app
+import Window from '@/components/Window/index.vue'
 
 export default {
   name: 'about-window',
@@ -50,16 +46,18 @@ export default {
 
   data () {
     return {
-      appVersion: app.getVersion()
+      appVersion: ''
     }
   },
 
-  mounted () {
+  async mounted () {
+    this.appVersion = await window.openclaw.getAppVersion()
+
     this.$el.querySelectorAll('a').forEach(item => {
       item.addEventListener('click', event => {
         event.preventDefault()
 
-        shell.openExternal(item.href)
+        window.openclaw.openExternal(item.href)
       })
     })
   }
