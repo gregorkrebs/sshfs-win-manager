@@ -13,10 +13,6 @@
 </template>
 
 <script>
-import { remote } from 'electron'
-
-const window = remote.getCurrentWindow()
-
 export default {
   name: 'Header',
 
@@ -37,9 +33,9 @@ export default {
   methods: {
     close () {
       if (this.closeAction === 'hide') {
-        window.hide()
+        window.openclaw.windowHide()
       } else {
-        window.close()
+        window.openclaw.windowClose()
       }
 
       this.$emit('close')

@@ -33,7 +33,7 @@
 <script>
 import { v4 as uuid } from 'uuid'
 
-import Icon from '@/components/Icon'
+import Icon from '@/components/Icon.vue'
 
 import SshfsParamsList from '@/SshfsParamsList'
 
