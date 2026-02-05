@@ -21,6 +21,10 @@ module.exports = {
     // allow async-await
     'generator-star-spacing': 0,
     // allow debugger during development
-    'no-debugger': process.env.NODE_ENV === 'production' ? 2 : 0
+    'no-debugger': process.env.NODE_ENV === 'production' ? 2 : 0,
+
+    // Work around a known ESLint 4.x crash edge-case in this project/toolchain
+    // (template-curly-spacing sometimes throws "Cannot read property 'range' of null").
+    'template-curly-spacing': 0
   }
 }
