@@ -30,6 +30,10 @@
         <Icon icon="openFolder"/>
       </button>
 
+      <button v-tooltip="'Open SSH terminal'" @click="$emit('ssh', conn)">
+        <Icon icon="terminal"/>
+      </button>
+
       <button v-show="showConnectButton" :class="{ 'success': isConnected, 'connecting-disconnecting': isConnectingOrDisconnecting }" :disabled="isConnectingOrDisconnecting" @click="$emit(isConnected ? 'disconnect' : 'connect', conn)">
         <svg v-show="isConnectingOrDisconnecting" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
           <circle cx="50" cy="50" fill="none" stroke-width="10" r="35" stroke-dasharray="164.93361431346415 56.97787143782138" transform="rotate(108.558 50 50)">
