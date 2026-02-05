@@ -4,6 +4,10 @@ import path from 'node:path'
 
 // Vite + Vue 2.7 setup.
 export default defineConfig({
+  // Required for file:// loads in packaged Electron apps.
+  // Without this, Vite emits absolute /assets/... URLs which blank-screen under file://.
+  base: './',
+
   plugins: [vue2()],
   root: process.cwd(),
   resolve: {
